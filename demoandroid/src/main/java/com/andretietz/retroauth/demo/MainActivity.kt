@@ -5,11 +5,7 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.webkit.CookieManager
 import android.widget.Toast
-import com.andretietz.retroauth.AndroidOwnerManager
-import com.andretietz.retroauth.AndroidToken
-import com.andretietz.retroauth.AndroidTokenStorage
-import com.andretietz.retroauth.Callback
-import com.andretietz.retroauth.RetroauthAndroidBuilder
+import com.andretietz.retroauth.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.buttonInvalidateToken
@@ -85,13 +81,7 @@ class MainActivity : AppCompatActivity() {
 
     buttonLogout.setOnClickListener {
       ownerManager.getActiveOwner(provider.ownerType)?.let { account ->
-        tokenStorage.getToken(account, provider.tokenType, object : Callback<AndroidToken> {
-          override fun onResult(result: AndroidToken?) {
-            result?.let {
-              tokenStorage.removeToken(account, provider.tokenType, it)
-            }
-          }
-        })
+        ownerManager.removeOwner(account)
       }
       /** remove all cookies to avoid an automatic relogin */
       val cookieManager = CookieManager.getInstance()

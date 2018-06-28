@@ -7,6 +7,9 @@
 * Fixed Demo app which is using Facebook with [scribe](https://github.com/scribejava/scribejava)
 * Added functionalities to refresh the token before the authenticated call is called.
 * Renaming TokenProvider to Authenticator
+* Since there's a small chance to create a deadlock when starting the login, on an authenticated request, I had to cancel this initial request, so that it is NOT executed automatically anymore.
+  * This can happen, when the user leaves the login screen for some authentication mechanism (such as magic link login, where you have to recreate the (already open) login screen itself)
+  
 
 ## 2.3.1 (2018-01-15)
 * Updating release script

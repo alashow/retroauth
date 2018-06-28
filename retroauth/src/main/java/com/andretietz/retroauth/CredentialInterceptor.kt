@@ -24,6 +24,10 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
+internal class LoginRequiredException : Exception()
+
+private val TOKEN_TYPE_LOCKERS = HashMap<Any, CredentialInterceptor.AccountTokenLock>()
+
 /**
  * This interceptor intercepts the okhttp requests and checks if authentication is required.
  * If so, it tries to get the owner of the token, then tries to get the token and
@@ -38,10 +42,6 @@ internal class CredentialInterceptor<out OWNER_TYPE : Any, OWNER : Any, TOKEN_TY
     private val tokenStorage: TokenStorage<OWNER, TOKEN_TYPE, TOKEN>,
     private val methodCache: MethodCache<OWNER_TYPE, TOKEN_TYPE> = MethodCache.DefaultMethodCache()
 ) : Interceptor {
-
-  companion object {
-    private val TOKEN_TYPE_LOCKERS = HashMap<Any, AccountTokenLock>()
-  }
 
   override fun intercept(chain: Interceptor.Chain): Response? {
     var response: Response? = null
@@ -64,7 +64,7 @@ internal class CredentialInterceptor<out OWNER_TYPE : Any, OWNER : Any, TOKEN_TY
 
           owner = ownerManager.getActiveOwner(authRequestType.ownerType)
               ?: ownerManager.openOwnerPicker(authRequestType.ownerType).get()
-              ?: ownerManager.createOwner(authRequestType.ownerType, authRequestType.tokenType).get()
+              ?: throw LoginRequiredException()
           // get the token of the owner
           val localToken = tokenStorage.getToken(owner, authRequestType.tokenType).get()
           // if the token is still valid and no refresh has been requested
@@ -95,6 +95,8 @@ internal class CredentialInterceptor<out OWNER_TYPE : Any, OWNER : Any, TOKEN_TY
         refreshRequested = authenticator.refreshRequired(++tryCount, response!!)
       } while (refreshRequested)
     } catch (error: Exception) {
+      if (error is LoginRequiredException)
+        ownerManager.createOwner(authRequestType.ownerType, authRequestType.tokenType)
       storeAndThrowError(authRequestType, error)
     }
     return response
@@ -108,11 +110,11 @@ internal class CredentialInterceptor<out OWNER_TYPE : Any, OWNER : Any, TOKEN_TY
   }
 
   private fun getLock(type: RequestType<OWNER_TYPE, TOKEN_TYPE>): AccountTokenLock {
-    synchronized(type, {
+    synchronized(type) {
       val lock: AccountTokenLock = TOKEN_TYPE_LOCKERS[type] ?: AccountTokenLock()
       TOKEN_TYPE_LOCKERS[type] = lock
       return lock
-    })
+    }
   }
 
   @Throws(Exception::class)

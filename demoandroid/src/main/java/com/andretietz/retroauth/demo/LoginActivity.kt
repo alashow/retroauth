@@ -13,6 +13,7 @@ import com.github.scribejava.core.model.OAuth2AccessToken
 import com.github.scribejava.core.oauth.OAuth20Service
 import com.github.scribejava.httpclient.okhttp.OkHttpHttpClient
 import io.reactivex.Single
+import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_login.webView
 import retrofit2.Retrofit
@@ -35,8 +36,10 @@ class LoginActivity : AuthenticationActivity() {
 
   private val authenticator by lazy { FacebookAuthenticator(application) }
 
-  override fun onCreate(savedInstanceBundle: Bundle?) {
-    super.onCreate(savedInstanceBundle)
+  private var disposable: Disposable? = null
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_login)
     Timber.plant(Timber.DebugTree())
 
@@ -51,7 +54,7 @@ class LoginActivity : AuthenticationActivity() {
         if (code == null) {
           view.loadUrl(url)
         } else {
-          Single.fromCallable(TokenVerifier(helper, code))
+          disposable = Single.fromCallable(TokenVerifier(helper, code))
               .subscribeOn(Schedulers.io())
               .subscribe({ result ->
                 val account = createOrGetAccount(result.name)
@@ -80,6 +83,11 @@ class LoginActivity : AuthenticationActivity() {
         return shouldOverrideUrlLoading(view, request.url.toString())
       }
     }
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    disposable?.dispose()
   }
 
   private class TokenVerifier(private val service: OAuth20Service, private val code: String)

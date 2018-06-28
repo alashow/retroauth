@@ -96,7 +96,7 @@ class AndroidTokenStorage constructor(
         token = accountManager.peekAuthToken(owner, type.tokenType)
       }
       if (token == null) {
-        throw IllegalStateException(
+        throw AuthenticationCanceledException(
             String.format("No token found! Make sure you store the token during login using %s#storeToken()",
                 AuthenticationActivity::class.java.simpleName)
         )
